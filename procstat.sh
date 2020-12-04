@@ -10,36 +10,30 @@
 #ola=( $(cat /proc/$pid_s/comm) $(ls -alh /proc/ | grep "$pid_s" | awk ' { printf "%s\n",$3 }') $pid_s $(cat /proc/$pid_s/status | awk '/VmSize|VmRSS/ { printf $2"\n" }') $(cat /proc/$pid_s/io | awk '/rchar|wchar/ { printf $2"\n" }') $(ls -alh /proc/ | grep $pid_s | awk '{ printf  "\"%s %d %s\n\"",$6,$7,$8 }') ) &&  echo $ola
 function get_Info () {
   pid_s=$1
-  ola=( $(cat /proc/$pid_s/comm ; ls -alh /proc/ | grep $pid_s | awk ' {  printf "%s\n",$3 }'; echo $pid_s; cat /proc/$pid_s/status | awk '/VmSize|VmRSS/ { printf $2"\n" }' ; cat /proc/$pid_s/io | awk '/rchar|wchar/ { printf $2"\n" }'; ls -alh /proc/ | grep $pid_s | awk '{ printf  "\"%s %d %s\n\"",$6,$7,$8 }' | sed "s/\"//g") )
-  echo ${ola[@]}
+  ola+=( $(cat /proc/$pid_s/comm ; ls -alh /proc/ | grep $pid_s | awk ' {  printf "\t%s\n",$3 }'; printf "\t$pid_s"; awk '/VmSize|VmRSS/ { printf "\t"$2"\n" }' /proc/$pid_s/status  ;r1=$(awk '/rchar/ { printf "\t"$2"\n" }') /proc/$pid_s/io && echo $r1;w1=$(awk '/wchar/ { printf "\t"$2"\n" }') /proc/$pid_s/io && echo $w1  ; sleep $2 & proc=$!;wait $proc  ls -alh /proc/ | grep $pid_s | awk '{ printf  "\t%s %d %s\n",$6,$7,$8 }' | sed "s/\"//g") )
 }
-  function usage () {
-    echo "specify the number of seconds"
-    exit 1
-  }
 
-#while [ $# -gt 0 ]
-#do# case $1 in
-   # -*) shift
-   #   ;;
-   # *) echo $1;  secsW=$1
-   #    ;;
- # esac
-#  shift
-#done
+function usage () {
+  echo "specify the number of seconds"
+  exit 1
+}
 
-#[[ -v secsW ]] || usage
+input=("$@")
+for i in ${input[@]};do
+  [[ "$i" =~ ^[0-9]+$ ]] && secsW=$i
+done
+[[ -v secsW ]] || usage
 
-while getopts ":c:s:e:u:p:mtdwr" name ;do
-  echo "ai"
-  #echo "n-> $name |flag: , Argument -$OPTARG-"
-  echo "$OPTSRING"
+while getopts ":c:s:e:u:p:mtdwr:" name ;do
+  echo "fck"
   case $name in
     [c]) # regular expression to get pid to analyse
-      pids=$(pidof $(cat /proc/*/comm | grep "$OPTARG") )
+      echo "ola"
+      pids=$(pgrep "$OPTARG")
       for p in ${pids[@]};do
         get_Info $p $secsW
       done;
+      echo ${ola[@]}
       ;;
     [s]) # data minima do inicio do processo
       echo "nice"
