@@ -80,28 +80,32 @@ while getopts ":c:s:e:u:p:mtdwr:" name ;do
       ;;
     [s]) # data minima do inicio do processo
       [[ -v process_info ]] || info_regex $secsW ".*"
-      echo "nice"
-      echo "$OPTARG";;
+     ;;
     [e]) # data maxima do inicio do processo
       [[ -v process_info ]] || info_regex $secsW ".*"
-      echo "nice"
-      echo "$OPTARG";;
+      ;;
     [u]) # nome do user Done
       [[ -v process_info ]] || info_regex $secsW ".*"
       IFS=$'\n' process_info=($(awk -v usr=$OPTARG '{if($2==usr) {print $0}}' <<< "${arr[*]}")); unset IFS
-    [p]) # numero processos a analisar DONE
+      ;;
+    [p])
       [[ -v process_info ]] || info_regex $secsW ".*"
       process_info=${process_info[@]:0:$OPTARG}
       ;;
     [m]) # sort on mem
       IFS=$'\n' process_info=($(sort -nk 4 <<<"${process_info[*]}")); unset IFS
+      ;;
     [t]) # sort on RSS
       IFS=$'\n' process_info=($(sort -nk 5 <<<"${process_info[*]}")); unset IFS
+      ;;
     [d]) # sort on Rater
       IFS=$'\n' process_info=($(sort -nk 8 <<<"${process_info[*]}")); unset IFS
+      ;;
     [w]) # sort on ratew
       IFS=$'\n' process_info=($(sort -nk 9 <<<"${process_info[*]}")); unset IFS
+      ;;
     [r]) # revert order
       IFS=$'\n' process_info=($(sort -r <<<"${process_info[*]}")); unset IFS
+      ;;
   esac
 done
