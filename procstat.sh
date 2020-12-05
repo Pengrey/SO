@@ -24,13 +24,14 @@ function info_regex (){
   process_info=( )
   secs=$1
   expression=$2
-  files=( $(grep $expression /proc/*/comm | awk -F ":" '{printf $1 "\n" }' | awk -F "/comm"  '{printf $1 "\n"}'))
+  files=( $(grep "$expression" /proc/*/comm | awk -F ":" '{printf $1 "\n" }' | awk -F "/comm"  '{printf $1 "\n"}'))
   for file in ${files[@]} ;do
-    rchar_i[$n]=$( awk '/rchar/ { printf $2 }' $file/io )
-    wchar_i[$n]=$( awk '/wchar/ { printf $2 }' $file/io )
-    sleep $secs & procs_ids[$n]=$!
-
-    n=$(( n + 1))
+    if [[ -z "$(touch -c $file/io 2>&1 | grep 'Permission denied')" ]]  ;then
+      rchar_i[$n]=$( awk '/rchar/ { printf $2 }' $file/io )
+      wchar_i[$n]=$( awk '/wchar/ { printf $2 }' $file/io )
+      sleep $secs & procs_ids[$n]=$!
+      n=$(( n + 1))
+    fi
   done
 
   for pid in $(seq 0 $(( ${#procs_ids[@]} - 1 )));do
@@ -49,6 +50,7 @@ function info_regex (){
 
     ratewchar_i=$(awk -v secs=2 -v iniw=${wchar_i[$pid]} '/wchar/ { printf "%f",(($2 - iniw )/secs) }' ${files[$pid]}/io )
             #com  usr  pid  mem rss rdb wdb rr    rw    date
+    printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$pid]} ${wchar_i[$pid]} $raterchar_i $ratewchar_i "$date_proc"
     process_info+=( $(printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$pid]} ${wchar_i[$pid]} $raterchar_i $ratewchar_i "$date_proc") )
   done
 }
@@ -75,36 +77,31 @@ while getopts ":c:s:e:u:p:mtdwr:" name ;do
   case $name in
     [c]) # regular expression to get pid to analyse
       info_regex $secsW $OPTARG
-      for i in ${!process_info[@]};do
-        echo ${process_info[$i]}      #sim
-      done
       ;;
     [s]) # data minima do inicio do processo
+      [[ -v process_info ]] || info_regex $secsW ".*"
       echo "nice"
       echo "$OPTARG";;
     [e]) # data maxima do inicio do processo
+      [[ -v process_info ]] || info_regex $secsW ".*"
       echo "nice"
       echo "$OPTARG";;
-    [u]) # nome do user
-      echo "nice"
-      echo "$OPTARG";;
-    [p]) # numero processos a analisar
+    [u]) # nome do user Done
+      [[ -v process_info ]] || info_regex $secsW ".*"
+      IFS=$'\n' process_info=($(awk -v usr=$OPTARG '{if($2==usr) {print $0}}' <<< "${arr[*]}")); unset IFS
+    [p]) # numero processos a analisar DONE
+      [[ -v process_info ]] || info_regex $secsW ".*"
       process_info=${process_info[@]:0:$OPTARG}
       ;;
     [m]) # sort on mem
-      echo "nice"
-      echo "$OPTARG";;
+      IFS=$'\n' process_info=($(sort -nk 4 <<<"${process_info[*]}")); unset IFS
     [t]) # sort on RSS
-      echo "nice"
-      echo "$OPTARG";;
+      IFS=$'\n' process_info=($(sort -nk 5 <<<"${process_info[*]}")); unset IFS
     [d]) # sort on Rater
-      echo "nice"
-      echo "$OPTARG";;
+      IFS=$'\n' process_info=($(sort -nk 8 <<<"${process_info[*]}")); unset IFS
     [w]) # sort on ratew
-      echo "nice"
-      echo "$OPTARG";;
+      IFS=$'\n' process_info=($(sort -nk 9 <<<"${process_info[*]}")); unset IFS
     [r]) # revert order
-      echo "$name"
-      echo "$OPTARG";;
+      IFS=$'\n' process_info=($(sort -r <<<"${process_info[*]}")); unset IFS
   esac
 done
