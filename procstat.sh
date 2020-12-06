@@ -55,14 +55,14 @@ function info_regex (){
       raterchar_i=$(awk -v secs=2 -v inir=${rchar_i[$i]} '/rchar/ { printf "%f",(($2 - inir)/secs) }' ${process_ids[$i]}/io )
 
       ratewchar_i=$(awk -v secs=2 -v iniw=${wchar_i[$i]} '/wchar/ { printf "%f",(($2 - iniw )/secs) }' ${process_ids[$i]}/io )
-              #com  usr  i  mem rss rdb wdb rr    rw    date
-      #printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc"
+
       string=$(printf "%-11s\t%-5s\t%-5d\t%8d\t%8d\t%10d\t%10d\t%12.2f\t%12.2f\t%-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc")
+
       process_info[$n]="$string"
+
       n=$(( $n + 1 ))
     fi
   done
-  echo $n
 }
 
 
@@ -201,3 +201,8 @@ case "$sort_by" in
     [[ -v sort_by ]] || printf "%s\n" "${process_info[@]}" | sort -r
     ;;
 esac
+IFS=$'\n'
+for val in "${process_info[@]}";do
+  printf "%s\n" $val
+done
+unset IFS
