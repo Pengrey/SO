@@ -56,7 +56,7 @@ function info_regex (){
 
       ratewchar_i=$(awk -v secs=2 -v iniw=${wchar_i[$i]} '/wchar/ { printf "%f",(($2 - iniw )/secs) }' ${process_ids[$i]}/io )
 
-      string=$(printf "%-11s\t%-5s\t%-5d\t%8d\t%8d\t%10d\t%10d\t%12.2f\t%12.2f\t%-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc")
+      string=$(printf "%-22s\t%-5s\t%-5d\t%8d\t%8d\t%10d\t%10d\t%12.2f\t%12.2f\t%-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc")
 
       process_info[$n]="$string"
 
