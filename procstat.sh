@@ -21,10 +21,10 @@
 ##      array de string com info
 ###################################################
 function info_regex (){
-
-  secs=2
-  expression=".*"
-  process_ids=( $(grep ".*" /proc/*/comm | awk -v pat="^/proc/[0-9]+/comm:$expression$" '{  if ($0 ~ pat) { printf $0 "\n" } }  ' | awk -F "/comm:" '{printf $1 "\n" }' ) )
+  declare -ga process_info=()
+  secs=$1
+  expression=$2
+  process_ids=( $(grep ".*" /proc/*/comm | awk -v pat="^/proc/[0-9]+/comm:$expression" '{  if ($0 ~ pat) { printf $0 "\n" } }  ' | awk -F "/comm:" '{printf $1 "\n" }' ) )
 
   for i in ${!process_ids[@]};do
     if [[ -r "${process_ids[$i]}/io" ]];then
@@ -44,18 +44,17 @@ function info_regex (){
     fi
     if [[ -r "${process_ids[$i]}/io" ]];then
       number_id=$(echo ${process_ids[$i]} | awk -F "/proc/" '{printf $2}')
-      comm=( $(cat ${process_ids[$i]}/comm) )
-      user=( $(ls -lah /proc | grep $number_id | awk ' { printf "%s" , $3 }') )
-      #user="whoknows"
-      mem=( $(awk '/VmSize/ { printf $2 }' ${process_ids[$i]}/status) )
-      rss=( $(awk '/VmRSS/ { printf $2 }' ${process_ids[$i]}/status) )
+      comm=$(cat ${process_ids[$i]}/comm)
+      user=$(stat -c "%U" ${process_ids[$i]}/comm)
+      mem=$(awk '/VmSize/ { printf $2 }' ${process_ids[$i]}/status)
+      rss=$(awk '/VmRSS/ { printf $2 }' ${process_ids[$i]}/status)
       date_proc=$(date -r ${process_ids[$i]} "+%Y %b %d %H:%M")
       raterchar_i=$(awk -v secs=2 -v inir=${rchar_i[$i]} '/rchar/ { printf "%f",(($2 - inir)/secs) }' ${process_ids[$i]}/io )
 
       ratewchar_i=$(awk -v secs=2 -v iniw=${wchar_i[$i]} '/wchar/ { printf "%f",(($2 - iniw )/secs) }' ${process_ids[$i]}/io )
               #com  usr  i  mem rss rdb wdb rr    rw    date
-      printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc"
-      process_info+=( $(printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc") )
+      #printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc"
+      process_info+=$(printf "%-20s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc")
     fi
   done
 }
@@ -118,3 +117,4 @@ while getopts ":c:s:e:u:p:mtdwr:" name ;do
       ;;
   esac
 done
+ echo ${process_info[0]}
