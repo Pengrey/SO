@@ -22,6 +22,7 @@
 ###################################################
 function info_regex (){
   declare -ga process_info=()
+  n=0
   secs=$1
   expression=$2
   process_ids=( $(grep ".*" /proc/*/comm | awk -v pat="^/proc/[0-9]+/comm:$expression" '{  if ($0 ~ pat) { printf $0 "\n" } }  ' | awk -F "/comm:" '{printf $1 "\n" }' ) )
@@ -54,7 +55,8 @@ function info_regex (){
       ratewchar_i=$(awk -v secs=2 -v iniw=${wchar_i[$i]} '/wchar/ { printf "%f",(($2 - iniw )/secs) }' ${process_ids[$i]}/io )
               #com  usr  i  mem rss rdb wdb rr    rw    date
       #printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc"
-      process_info+=$(printf "%-20s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc")
+      process_info[$n]=$(printf "%-20s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc")
+      n=$(( $n + 1 ))
     fi
   done
 }
@@ -81,7 +83,7 @@ function usage () {
 #[[ -v secsW ]] || usage
 secsW=2
 
-while getopts ":c:s:e:u:p:mtdwr:" name ;do
+while getopts ":c:s:e:u:p:mtdwr" name ;do
   case $name in
     [c]) # regular expression to get pid to analyse
       info_regex $secsW $OPTARG
@@ -110,11 +112,13 @@ while getopts ":c:s:e:u:p:mtdwr:" name ;do
       IFS=$'\n' process_info=($(sort -nk 8 <<<"${process_info[*]}")); unset IFS
       ;;
     [w]) # sort on ratew
-      IFS=$'\n' process_info=($(sort -nk 9 <<<"${process_info[*]}")); unset IFS
+      #IFS=$'\n' process_info=($(sort -nk 9 <<<"${process_info[*]}")); unset IFS
       ;;
     [r]) # revert order
-      IFS=$'\n' process_info=($(sort -r <<<"${process_info[*]}")); unset IFS
+      [[ -v process_info ]] || info_regex $secsW "st"
+      #IFS="\n";process_info=($(sort -r <<< "${process_info[*]}")); unset IFS
+      #printf "%s" "${process_info[@]}"
+      printf "%s\n" "${process_info[@]}" | sort -r
       ;;
   esac
 done
- echo ${process_info[0]}
