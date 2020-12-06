@@ -26,33 +26,42 @@ function info_regex (){
   expression=$2
   files=( $(grep "$expression" /proc/*/comm | awk -F ":" '{printf $1 "\n" }' | awk -F "/comm"  '{printf $1 "\n"}'))
   for file in ${files[@]} ;do
-    if [[ -z "$(touch -c $file/io 2>&1 | grep 'Permission denied')" ]]  ;then
+    touch -c ${files[$pid]} 2> /dev/null
+    val=$?
+    if [[ $val -le 0 ]];then
       rchar_i[$n]=$( awk '/rchar/ { printf $2 }' $file/io )
       wchar_i[$n]=$( awk '/wchar/ { printf $2 }' $file/io )
       sleep $secs & procs_ids[$n]=$!
-      n=$(( n + 1))
     fi
+      n=$(( n + 1))
   done
 
-  for pid in $(seq 0 $(( ${#procs_ids[@]} - 1 )));do
+  for pid in $(seq 0 $(( ${#files[@]} - 1 )));do
 # processo esta a correr ? sim espera
 #pode nao estar a correr para intervalos curtos
-    if [ -n "$(ps -p ${procs_ids[$pid]} -o pid=)" ];then
-      wait ${procs_ids[$pid]}
-    fi
-    number_id=$(echo ${files[$pid]} | awk -F "/proc/" '{printf $2}')
-    comm=( $(cat ${files[$pid]}/comm) )
-    user=( $(ls -lah /proc | grep $number_id | awk ' { printf "%s" , $3 }') )
-    mem=( $(awk '/VmSize/ { printf $2 }' ${files[$pid]}/status) )
-    rss=( $(awk '/VmRSS/ { printf $2 }' ${files[$pid]}/status) )
-    date_proc=$(date -r ${files[$pid]} "+%Y %b %d %H:%M")
-    raterchar_i=$(awk -v secs=2 -v inir=${rchar_i[$pid]} '/rchar/ { printf "%f",(($2 - inir)/secs) }' ${files[$pid]}/io )
+    touch -c ${files[$pid]} 2> /dev/null
+    val=$?
+    if [[ $val -le 0 ]];then
+      echo $file
+      if [ -n "$(ps -p ${procs_ids[$pid]} -o pid=)" ];then
+        wait ${procs_ids[$pid]}
+      fi
+      number_id=$(echo ${files[$pid]} | awk -F "/proc/" '{printf $2}')
+      comm=( $(cat ${files[$pid]}/comm) )
+      user=( $(ls -lah /proc | grep $number_id | awk ' { printf "%s" , $3 }') )
+      mem=( $(awk '/VmSize/ { printf $2 }' ${files[$pid]}/status) )
+      rss=( $(awk '/VmRSS/ { printf $2 }' ${files[$pid]}/status) )
+      date_proc=$(date -r ${files[$pid]} "+%Y %b %d %H:%M")
+      raterchar_i=$(awk -v secs=2 -v inir=${rchar_i[$pid]} '/rchar/ { printf "%f",(($2 - inir)/secs) }' ${files[$pid]}/io )
 
-    ratewchar_i=$(awk -v secs=2 -v iniw=${wchar_i[$pid]} '/wchar/ { printf "%f",(($2 - iniw )/secs) }' ${files[$pid]}/io )
-            #com  usr  pid  mem rss rdb wdb rr    rw    date
-    printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$pid]} ${wchar_i[$pid]} $raterchar_i $ratewchar_i "$date_proc"
-    process_info+=( $(printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$pid]} ${wchar_i[$pid]} $raterchar_i $ratewchar_i "$date_proc") )
+      ratewchar_i=$(awk -v secs=2 -v iniw=${wchar_i[$pid]} '/wchar/ { printf "%f",(($2 - iniw )/secs) }' ${files[$pid]}/io )
+              #com  usr  pid  mem rss rdb wdb rr    rw    date
+      printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$pid]} ${wchar_i[$pid]} $raterchar_i $ratewchar_i "$date_proc"
+      process_info+=( $(printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$pid]} ${wchar_i[$pid]} $raterchar_i $ratewchar_i "$date_proc") )
+    fi
+
   done
+
 }
 
 
@@ -69,7 +78,10 @@ function usage () {
 
 input=("$@")
 for i in ${input[@]};do
-  [[ "$i" =~ ^[0-9]+$ ]] && secsW=$i
+  if [[ "$i" =~ [[:digit:]]+  ]];then
+    secsW="$i"
+    break
+  fi
 done
 [[ -v secsW ]] || usage
 
