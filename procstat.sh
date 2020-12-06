@@ -21,47 +21,43 @@
 ##      array de string com info
 ###################################################
 function info_regex (){
-  process_info=( )
-  secs=$1
-  expression=$2
-  files=( $(grep "$expression" /proc/*/comm | awk -F ":" '{printf $1 "\n" }' | awk -F "/comm"  '{printf $1 "\n"}'))
-  for file in ${files[@]} ;do
-    touch -c ${files[$pid]} 2> /dev/null
-    val=$?
-    if [[ $val -le 0 ]];then
-      rchar_i[$n]=$( awk '/rchar/ { printf $2 }' $file/io )
-      wchar_i[$n]=$( awk '/wchar/ { printf $2 }' $file/io )
-      sleep $secs & procs_ids[$n]=$!
+
+  secs=2
+  expression=".*"
+  process_ids=( $(grep ".*" /proc/*/comm | awk -v pat="^/proc/[0-9]+/comm:$expression$" '{  if ($0 ~ pat) { printf $0 "\n" } }  ' | awk -F "/comm:" '{printf $1 "\n" }' ) )
+
+  for i in ${!process_ids[@]};do
+    if [[ -r "${process_ids[$i]}/io" ]];then
+      rchar_i[$i]=$( awk '/rchar/ { printf $2 }' ${process_ids[$i]}/io )
+      wchar_i[$i]=$( awk '/wchar/ { printf $2 }' ${process_ids[$i]}/io )
+      sleep $secs & procs_ids[$i]=$!
+    else
+      procs_ids[$i]=0
     fi
-      n=$(( n + 1))
   done
 
-  for pid in $(seq 0 $(( ${#files[@]} - 1 )));do
-# processo esta a correr ? sim espera
-#pode nao estar a correr para intervalos curtos
-    touch -c ${files[$pid]} 2> /dev/null
-    val=$?
-    if [[ $val -le 0 ]];then
-      echo $file
-      if [ -n "$(ps -p ${procs_ids[$pid]} -o pid=)" ];then
-        wait ${procs_ids[$pid]}
+  for i in ${!process_ids[@]};do
+    if [[ ${procs_ids[$i]} != 0 ]];then
+      if [[ -r "/proc/${procs_ids[$i]}/io" ]];then
+        wait ${procs_ids[$i]}
       fi
-      number_id=$(echo ${files[$pid]} | awk -F "/proc/" '{printf $2}')
-      comm=( $(cat ${files[$pid]}/comm) )
-      user=( $(ls -lah /proc | grep $number_id | awk ' { printf "%s" , $3 }') )
-      mem=( $(awk '/VmSize/ { printf $2 }' ${files[$pid]}/status) )
-      rss=( $(awk '/VmRSS/ { printf $2 }' ${files[$pid]}/status) )
-      date_proc=$(date -r ${files[$pid]} "+%Y %b %d %H:%M")
-      raterchar_i=$(awk -v secs=2 -v inir=${rchar_i[$pid]} '/rchar/ { printf "%f",(($2 - inir)/secs) }' ${files[$pid]}/io )
-
-      ratewchar_i=$(awk -v secs=2 -v iniw=${wchar_i[$pid]} '/wchar/ { printf "%f",(($2 - iniw )/secs) }' ${files[$pid]}/io )
-              #com  usr  pid  mem rss rdb wdb rr    rw    date
-      printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$pid]} ${wchar_i[$pid]} $raterchar_i $ratewchar_i "$date_proc"
-      process_info+=( $(printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$pid]} ${wchar_i[$pid]} $raterchar_i $ratewchar_i "$date_proc") )
     fi
+    if [[ -r "${process_ids[$i]}/io" ]];then
+      number_id=$(echo ${process_ids[$i]} | awk -F "/proc/" '{printf $2}')
+      comm=( $(cat ${process_ids[$i]}/comm) )
+      user=( $(ls -lah /proc | grep $number_id | awk ' { printf "%s" , $3 }') )
+      #user="whoknows"
+      mem=( $(awk '/VmSize/ { printf $2 }' ${process_ids[$i]}/status) )
+      rss=( $(awk '/VmRSS/ { printf $2 }' ${process_ids[$i]}/status) )
+      date_proc=$(date -r ${process_ids[$i]} "+%Y %b %d %H:%M")
+      raterchar_i=$(awk -v secs=2 -v inir=${rchar_i[$i]} '/rchar/ { printf "%f",(($2 - inir)/secs) }' ${process_ids[$i]}/io )
 
+      ratewchar_i=$(awk -v secs=2 -v iniw=${wchar_i[$i]} '/wchar/ { printf "%f",(($2 - iniw )/secs) }' ${process_ids[$i]}/io )
+              #com  usr  i  mem rss rdb wdb rr    rw    date
+      printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc"
+      process_info+=( $(printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc") )
+    fi
   done
-
 }
 
 
@@ -76,14 +72,15 @@ function usage () {
   exit 1
 }
 
-input=("$@")
-for i in ${input[@]};do
-  if [[ "$i" =~ [[:digit:]]+  ]];then
-    secsW="$i"
-    break
-  fi
-done
-[[ -v secsW ]] || usage
+#input=("$@")
+#for i in ${input[@]};do
+  #if [[ "$i" =~ [[:digit:]]+  ]];then
+    #secsW="$i"
+    #break
+  #fi
+#done
+#[[ -v secsW ]] || usage
+secsW=2
 
 while getopts ":c:s:e:u:p:mtdwr:" name ;do
   case $name in
