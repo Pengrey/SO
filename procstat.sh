@@ -9,6 +9,7 @@
 #awk '/rchar|wchar/{printf $0"\n"}' /proc/11052/io
 #ola=( $(cat /proc/$pid_s/comm) $(ls -alh /proc/ | grep "$pid_s" | awk ' { printf "%s\n",$3 }') $pid_s $(cat /proc/$pid_s/status | awk '/VmSize|VmRSS/ { printf $2"\n" }') $(cat /proc/$pid_s/io | awk '/rchar|wchar/ { printf $2"\n" }') $(ls -alh /proc/ | grep $pid_s | awk '{ printf  "\"%s %d %s\n\"",$6,$7,$8 }') ) &&  echo $ola
 
+
 ###################################################
 ##
 ## get info com uma expresao regex
@@ -56,10 +57,12 @@ function info_regex (){
       ratewchar_i=$(awk -v secs=2 -v iniw=${wchar_i[$i]} '/wchar/ { printf "%f",(($2 - iniw )/secs) }' ${process_ids[$i]}/io )
               #com  usr  i  mem rss rdb wdb rr    rw    date
       #printf "%-11s  %-7s  %-5d  %10d  %8d  %18d  %18d  %12.2f  %12.2f  %-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc"
-      process_info[$n]=$(printf "%-11s\t%-5s\t%-5d\t%8d\t%8d\t%8d\t%8d\t%12.2f\t%12.2f\t%-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc")
+      string=$(printf "%-11s\t%-5s\t%-5d\t%8d\t%8d\t%10d\t%10d\t%12.2f\t%12.2f\t%-17s\n" $comm $user $number_id $mem $rss ${rchar_i[$i]} ${wchar_i[$i]} $raterchar_i $ratewchar_i "$date_proc")
+      process_info[$n]="$string"
       n=$(( $n + 1 ))
     fi
   done
+  echo $n
 }
 
 
@@ -84,7 +87,6 @@ function usage () {
 #[[ -v secsW ]] || usage
 secsW=2
 regexex=".*"
-sort_by="alpha"
 
 while getopts ":c:s:e:u:p:mtdwr" name ;do
   case $name in
@@ -111,22 +113,22 @@ while getopts ":c:s:e:u:p:mtdwr" name ;do
       #[[ -v process_info ]] || info_regex $secsW ".*"
       #IFS=$'\n' process_info=($(sort -nk 4 <<<"${process_info[*]}")); unset IFS
       #printf "%s\n" "${process_info[@]}" | sort -nk 4
-      sort_by="mem"
+      [[ -v sort_by ]] && echo "only one sorting way can be used" ||  sort_by="mem"
       ;;
     [t]) # sort on RSS
       #[[ -v process_info ]] || info_regex $secsW ".*"
       #IFS=$'\n' process_info=($(sort -nk 5 <<<"${process_info[*]}")); unset IFS
       #printf "%s\n" "${process_info[@]}" | sort -nk 5
-      sort_by="rss"
+      [[ -v sort_by ]] && echo "only one sorting way can be used" ||sort_by="rss"
       ;;
     [d]) # sort on Rater
-      sort_by="rater"
+      [[ -v sort_by ]] && echo "only one sorting way can be used" ||sort_by="rater"
       #[[ -v process_info ]] || info_regex $secsW ".*"
       #printf "%s\n" "${process_info[@]}" | sort -nk 8
       #IFS=$'\n' process_info=($(sort -nk 8 <<<"${process_info[*]}")); unset IFS
       ;;
     [w]) # sort on ratew
-      sort_by="ratew"
+      [[ -v sort_by ]] && echo "only one sorting way can be used" || sort_by="ratew"
       #[[ -v process_info ]] || info_regex $secsW ".*"
       #IFS=$'\n' process_info=($(sort -nk 9 <<<"${process_info[*]}")); unset IFS
       #printf "%s\n" "${process_info[@]}" | sort -nk 9
@@ -140,11 +142,10 @@ while getopts ":c:s:e:u:p:mtdwr" name ;do
       ;;
   esac
 done
+[[ -v sort_by ]] || sort_by="alpha"
+
 info_regex $secsW $regexex
 #number of process esta definida entao imprime-se os primeiros number_of_process
-if [[ -v number_of_process ]];then
-  process_info=("${process_info[@]:0:$number_of_process}")
-fi
 if [[ -v file_owner  ]];then
   process_info=($(printf "%s\n" "${process_info[@]}" | awk -v usr=$OPTARG '{if($2==usr) {print $0}}'))
 fi
@@ -152,34 +153,51 @@ fi
 #if [[ -v s_date &&  -v e_date  ]];then
   #filter
 #fi
+printf "%-11s\t%-12s\t%-7s\t%7s\t%16s\t%8s\t%9s\t%12s\t%12s\t%17s\n" "COMM" "USER" "PID" "MEM" "RSS" "READB" "WRITEB" "RATER" "RATEW" "DATE"
+
 case "$sort_by" in
   "alpha")
-    [[ -v sort_i ]] && printf "%s\n" "${process_info[@]}" | sort -nk 9 -r ||printf "%s\n" "${process_info[@]}" | sort -d
+                        #sort_i esta definido entao flag -r for adicionada    sort_i nao esta definido
+    if [[ -v sort_i ]];then
+      process_info=("$(printf "\"%s\"\n" "${process_info[@]}" | sort -nk 9 -r)")
+    else
+      process_info=("$(printf "%s\n" "${process_info[@]}" | sort -d)")
+    fi
     ;;
   "ratew")
                         #sort_i esta definido entao flag -r for adicionada    sort_i nao esta definido
-      [[ -v sort_i ]] && printf "%s\n" "${process_info[@]}" | sort -nk 9 -r || printf "%s\n" "${process_info[@]}" | sort -nk 9
+     if [[ -v sort_i ]];then
+       process_info=("$(printf "%s\n" "${process_info[@]}" | sort -nk 9 -r)")
+     else
+      process_info=("$( printf "%s\n" "${process_info[@]}" | sort -nk 9)")
+     fi
     ;;
   "rater")
                         #sort_i esta definido entao flag -r for adicionada    sort_i nao esta definido
-    [[ -v sort_i ]] && printf "%s\n" "${process_info[@]}" | sort -nk 8 -r || printf "%s\n" "${process_info[@]}" | sort -nk 8
+    if [[ -v sort_i ]];then
+       process_info=("$( printf "%s\n" "${process_info[@]}" | sort -nk 8 -r)")
+    else
+       process_info=("$( printf "%s\n" "${process_info[@]}" | sort -nk 8)")
+    fi
     ;;
   "rss")
                         #sort_i esta definido entao flag -r for adicionada    sort_i nao esta definido
-    [[ -v sort_i ]] && printf "%s\n" "${process_info[@]}" | sort -nk 5 -r || printf "%s\n" "${process_info[@]}" | sort -nk 5
+    if [[ -v sort_i ]];then
+     process_info=("$( printf "%s\n" "${process_info[@]}" | sort -nk 5 -r)")
+    else
+      process_info=("$(printf "%s\n" "${process_info[@]}" | sort -nk 5)")
+    fi
     ;;
   "mem")
                         #sort_i esta definido entao flag -r for adicionada    sort_i nao esta definido
-    [[ -v sort_i ]] && printf "%s\n" "${process_info[@]}" | sort -nk 4 -r || printf "%s\n" "${process_info[@]}" | sort -nk 4
+    if [[ -v sort_i ]];then
+      process_info=("$(printf "%s\n" "${process_info[@]}" | sort -nk 4 -r)")
+    else
+     process_info=("$( printf "%s\n" "${process_info[@]}" | sort -nk 4)")
+    fi
     ;;
   "inverse")
                       #sort_by nao esta definido apenas foi chamada a flag -r
     [[ -v sort_by ]] || printf "%s\n" "${process_info[@]}" | sort -r
     ;;
 esac
-
-
-printf "%s\n" "${process_info[1]}" | awk -F "\t" '{ printf $10 "\n" }'
-printf "%s\n" "${process_info[2]}" | awk -F "\t" '{ printf $10 "\n"}'
-printf "%s\n" "${process_info[3]}" | awk  -F "\t" '{ printf $10 "\n"}'
-printf "%s\n" "${process_info[4]}" | awk  -F "\t" '{ printf $10 "\n"}'
