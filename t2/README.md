@@ -5,11 +5,11 @@
   Referee -> /*TODO: error treating em semaforos*/
 ##    PLAYER
   Player ->
-          1. /*TODO: modificar o constitute team porque esta errado*/
+          1. /*TODO: mudar a parte do else if dentro da zona critica na funcao constitute team para que o player consiga corretamente formar as equipas*/
           1. /*TODO: error treating em semaforos*/
 ##    GOALIE
   Goalie ->
-          1. /*TODO: modificar o constitute team porque esta errado*/
+          1. /*TODO: TUDO*/
           1. /*TODO: error treating em semaforos*/
 
 
@@ -20,7 +20,7 @@ so o proprio tipo altera o seu estados
 ##prob datastruct estruturas de dados
 
 
-~~ STAT; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~ STAT; ~~
 typedef struct {
     /** \brief players state */                   #estados para mudar
     `unsigned int playerStat[NUMPLAYERS];          #estados para mudar`
@@ -34,7 +34,7 @@ typedef struct {
 sh
 ^
 |
-~~ FULL_STAT; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~ FULL_STAT; ~~
 typedef struct
 {   /** \brief state of all intervening entities */
     STAT st;
@@ -60,18 +60,19 @@ typedef struct
     /** \brief id of team that will be formed next - initial value=1 */
     `int teamId;`
 
-} FULL_STAT;
+}
+~~ FULL_STAT; end ~~
 ---------------------------------------------------------------------------
 typedef struct
         { /** \brief full state of the problem */
           FULL_STAT fSt;
 
-    ##########################      /* semaphores ids */        #####################
+    ##/* semaphores ids */
           **brief identification of critical region protection semaphore – val = 1**
           `unsigned int mutex;`
           **brief identification of semaphore used by players**
           **to wait for forming team teammate - val = 0**
-          `unsigned int playersWaitTeam;`
+          `unsigned int playersW&aitTeam;`
           **brief identification of semaphore used by goalies to wait**
           **for forming team teammate - val = 0**
           `unsigned int goaliesWaitTeam;`
@@ -90,7 +91,7 @@ typedef struct
 
         } SHARED_DATA;
 ---------------------------------------------------------------------------
-## Available states
+~~ Available states~~
     /* Player/Goalie state constants */
 
     /** \brief player/goalie initial state, arriving */
@@ -157,7 +158,7 @@ typedef struct
 
 #define  ENDING_GAME       4
 ---------------------------------------------------------------------------------------
-**Important Semaphores**
+##Important Semaphores
 
     `probSemSharedMemSoccerGame.c:135    sh->playersWaitTeam             = PLAYERSWAITTEAM;`
     `probSemSharedMemSoccerGame.c:136    sh->goaliesWaitTeam             = GOALIESWAITTEAM;`
@@ -167,7 +168,7 @@ typedef struct
     `probSemSharedMemSoccerGame.c:140    sh->playerRegistered            = PLAYERREGISTERED;`
 
 ---------------------------------------------------------------------------------------
-**Important Constats**
+##Important Constats
 
     `probConst.h:17#define  NUMPLAYERS       10`
     `probConst.h:19#define  NUMGOALIES        3`
