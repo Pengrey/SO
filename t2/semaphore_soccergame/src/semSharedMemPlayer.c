@@ -65,14 +65,12 @@ int main (int argc, char *argv[])
     int key;                                            /*access key to shared memory and semaphore set */
     char *tinp;                                                       /* numerical parameters test flag */
     int n, team;
-
     /* validation of command line parameters */
     if (argc != 4) {
         freopen ("error_PL", "a", stderr);
         fprintf (stderr, "Number of parameters is incorrect!\n");
         return EXIT_FAILURE;
     }
-
 
     /* get goalie id - argv[1]*/
     n = (unsigned int) strtol (argv[1], &tinp, 0);
@@ -146,8 +144,6 @@ static void arrive(int id)
 
     sh->fSt.st.playerStat[id] = ARRIVING;
     saveState(nFic , &sh->fSt);
-    sh->fSt.playersArrived++;
-    sh->fSt.playersFree++;
 
     /* TODO: insert your code here */
 
@@ -178,63 +174,83 @@ static void arrive(int id)
 static int playerConstituteTeam (int id)
 {
     int ret = 0;
-
     if (semDown (semgid, sh->mutex) == -1)  {                                                     /* enter critical region */
         perror ("error on the up operation for semaphore access (PL)");
         exit (EXIT_FAILURE);
     }
+
     /* TODO: insert your code here */
+
     // begingin of code
-    if ( sh->fSt.playersArrived > NUMPLAYERS - NUMGOALIES + NUMTEAMGOALIES)
+    //printf("\033[0;31mPLAYER %d HAS CHEGADO\033[0m\n", id);
+
+    sh->fSt.playersArrived++;
+    sh->fSt.playersFree++;
+
+
+    if ( sh->fSt.playersArrived > 2 * NUMTEAMPLAYERS )
     {
-      printf("PLAYER %d is late\n",id);
+     // printf("\033[0;31mPLAYER %d LATE\033[0m\n", id);
       sh->fSt.st.playerStat[id] = LATE;
       saveState(nFic , &sh->fSt);
+      sh->fSt.playersFree--;
     }
-    else if ( sh->fSt.playersFree == NUMTEAMPLAYERS && sh->fSt.goaliesFree == NUMTEAMGOALIES)
+    else if ( sh->fSt.playersFree >= 4 && sh->fSt.goaliesFree >= 1)
     {
-      sh->fSt.playersArrived++;
-      sh->fSt.playersFree++;
-      sh->fSt.teamId = sh->fSt.teamId + 1;
-      //jogador que pode formar equipa
+      //printf(" \033[0;32mPLAYER %d FORMINGTEAM\033[0m\n", id);
       sh->fSt.st.playerStat[id] = FORMING_TEAM;
+      saveState(nFic , &sh->fSt);
       for( int i = 0; i < NUMTEAMPLAYERS ; i++)
       {
         semUp(semgid, sh->playersWaitTeam);
         semDown(semgid, sh->playerRegistered);
       }
+      for( int i = 0; i < NUMTEAMGOALIES ; i++)
+      {
+        semUp(semgid, sh->goaliesWaitTeam);
+        semDown(semgid, sh->playerRegistered);
+      }
     }
-    else // jogador a espera de equipa porque nao pode forma la
+    else
     {
       sh->fSt.st.playerStat[id] = WAITING_TEAM;
+      saveState(nFic , &sh->fSt);
       ret = sh->fSt.teamId;
-      sh->fSt.playersArrived++;
-      sh->fSt.playersFree++;
+      //printf(" \033[0;32mPLAYER %d WAITINGFORTEAM saved TEAM --> %d\033[0m\n", id, ret);
     }
+    //printf("\033[0;31mNUMBER OF Players Arrived %d\033[0m\n", sh->fSt.playersArrived );
+    if ( sh->fSt.playersArrived == NUMTEAMPLAYERS )
+      {
+        //printf("\033[0;31mPLAYER %d HAS CHEGADO INCREMENTEI\033[0m \n", id);
+        ret = sh->fSt.teamId;
+        sh->fSt.teamId++;
+      }
     // end of code
-    saveState(nFic , &sh->fSt);
+
     if (semUp (semgid, sh->mutex) == -1) {                                                         /* exit critical region */
         perror ("error on the down operation for semaphore access (PL)");
         exit (EXIT_FAILURE);
     }
-#if 1
     // bloquear o jogador ate alguem dizer para ele ir jogar semUP register
-    if ( sh->fSt.st.playerStat[id] != LATE){
-      semDown(semgid, sh->playersWaitTeam);
-      ret = 0;
-    }
-    while ( 1 )
+
+    // begingin of code
+    // end of code
+    if(sh->fSt.st.playerStat[id] != LATE )
     {
-      if ( semUp(semgid, sh->playerRegistered) != -1 )
+      //printf(" \033[0;32mPLAYER %d  is WAITING FOR TEAM\033[0m\n",id);
+      semDown(semgid, sh->playersWaitTeam);
+    while( 1 )
+    {
+      if(semUp(semgid, sh->playerRegistered) != -1)
       {
+        //printf(" \033[0;35mPLAYER %d  is REgistering Itself FOR TEAM %d\033[0m\n",id,ret);
         sh->fSt.st.playerStat[id] = (ret == 1) ? WAITING_START_1 : WAITING_START_2;
         saveState(nFic , &sh->fSt);
         break;
       }
     }
-#endif
-    /* TODO: insert your code here */
-    semUp(semgid, sh->playerRegistered);
+    }
+      /* TODO: insert your code here */
 
     return ret;
 }
