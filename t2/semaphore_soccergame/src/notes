@@ -1,0 +1,3 @@
+../src/Makefile:4SUFFIX = $(shell getconf LONG_BIT)
+../src/Makefile:11OBJS = sharedMemory.o semaphore.o logging.o
+../src/logging.c:53         fflush(fic);
