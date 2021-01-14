@@ -2,15 +2,16 @@
 
 
 ##    REFEREE
-  Referee -> /*TODO: error treating em semaforos*/
+  Referee ->
+          1. /*TODO: error treating em semaforos*/
+          2. **Overall its working**
 ##    PLAYER
   Player ->
-          1. /TODO: Fix player forming a team */
-          2. /TODO: Fix teamId ( whok change's it?)*/
-          3. /*TODO: error treating em semaforos*/
+          1. /*TODO: error treating em semaforos*/
+          2. **Overall its working**
 ##    GOALIE
   Goalie ->
-          1. /*TODO: TUDO*/
+          1. /*TODO: SECONDGOALIE STRANGELY LOCKS EVERYTHING BEFORE A FOURTH PLAYER ARRVING*/
           1. /*TODO: error treating em semaforos*/
 
 
@@ -73,7 +74,7 @@ typedef struct
           `unsigned int mutex;`
           **brief identification of semaphore used by players**
           **to wait for forming team teammate - val = 0**
-          `unsigned int playersW&aitTeam;`
+          `unsigned int playersWaitTeam;`
           **brief identification of semaphore used by goalies to wait**
           **for forming team teammate - val = 0**
           `unsigned int goaliesWaitTeam;`
@@ -273,3 +274,51 @@ wait dor team
 sh->fst.st.refereeStat = WAITING_TEAMS;
 
 saveState(nFic , &sh->st)
+///////////////////////////////////////////////////////////////////////////////
+// GOALIE ERROR BLOCKS BEFORE HAVING 4 PLAYERS AVAILABLE
+Run n.º 19
+                     SoccerGame - Description of the internal state
+
+ P00 P01 P02 P03 P04 P05 P06 P07 P08 P09  G00 G01 G02  R01
+   0   0   0   0   0   0   0   0   0   0    0   0   0    0
+PLAYERS HAVE ENDED MATCH
+Goalie HAVE ENDED MATCH
+REferee HAVE ENDED MATCH
+   0   0   0   0   0   0   0   0   0   0    0   0   0    0
+   0   0   0   0   0   0   0   0   0   0    0   0   0    0
+   0   0   0   0   0   0   0   0   0   0    0   0   0    0
+   0   0   0   0   0   0   0   0   0   0    0   0   0    0
+   0   0   0   0   0   0   0   0   0   0    0   0   0    0
+   0   0   0   0   0   0   0   0   0   0    0   0   0    0
+   0   0   0   0   0   0   0   0   0   0    0   0   0    0
+   0   0   0   0   0   0   0   0   0   0    0   0   0    0
+   0   0   0   0   0   0   0   0   0   0    0   0   0    0
+   0   0   0   0   0   0   0   0   0   0    0   0   0    0
+   0   0   0   0   0   0   0   0   0   0    0   0   0    0
+   1   0   0   0   0   0   0   0   0   0    0   0   0    0
+   1   0   0   0   0   0   0   0   0   0    0   0   0    0
+   1   0   0   0   0   0   0   0   0   0    0   0   0    0
+   1   0   1   0   0   0   0   0   0   0    0   0   0    0
+   1   0   1   0   0   0   0   0   0   0    0   0   0    0
+   1   0   1   0   1   0   0   0   0   0    0   0   0    0
+   1   1   1   0   1   0   0   0   0   0    0   0   0    0
+   1   1   1   0   1   0   1   0   0   0    0   0   0    0
+   1   1   1   1   1   0   1   0   0   0    0   0   0    0
+   1   1   1   1   1   0   1   1   0   0    0   0   0    0
+!!!! NUMOFFREE GOALIES 1 NUM OF FREE PLAYERS 7 !!!!
+   1   1   1   1   1   0   1   1   0   0    2   0   0    0
+   1   1   1   1   1   0   1   1   0   0    3   0   0    0
+   1   1   1   1   1   1   1   1   0   0    3   0   0    0
+!!!! NUMOFFREE GOALIES 2 NUM OF FREE PLAYERS 3 !!!!
+   1   1   1   1   1   1   1   1   0   0    3   1   0    0
+   4   1   1   1   1   1   1   1   0   0    3   1   0    0
+   4   1   4   1   1   1   1   1   0   0    3   1   0    0
+   4   1   4   1   4   1   1   1   0   0    3   1   0    0
+   4   4   4   1   4   1   1   1   0   0    3   1   0    0
+   4   4   4   1   4   1   1   1   0   0    5   1   0    0
+   4   4   4   1   4   1   1   1   7   0    5   1   0    0
+   4   4   4   1   4   1   1   1   7   7    5   1   0    0
+   4   4   4   1   4   1   1   1   7   7    5   1   0    1
+   4   4   4   1   4   1   1   1   7   7    5   1   0    1
+   6   4   4   1   4   1   1   1   7   7    5   1   0    1
+   6   4   4   1   4   1   1   1   7   7    5   1   7    1
