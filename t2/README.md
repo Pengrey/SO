@@ -5,8 +5,9 @@
   Referee -> /*TODO: error treating em semaforos*/
 ##    PLAYER
   Player ->
-          1. /*TODO: mudar a parte do else if dentro da zona critica na funcao constitute team para que o player consiga corretamente formar as equipas*/
-          1. /*TODO: error treating em semaforos*/
+          1. /TODO: Fix player forming a team */
+          2. /TODO: Fix teamId ( whok change's it?)*/
+          3. /*TODO: error treating em semaforos*/
 ##    GOALIE
   Goalie ->
           1. /*TODO: TUDO*/
