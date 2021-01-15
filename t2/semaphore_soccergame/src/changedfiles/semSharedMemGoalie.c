@@ -206,9 +206,9 @@ static int goalieConstituteTeam (int id)
      *   cant be  FST.playersFree == NUMTEAMPLAYERS && FST.goaliesFree == NUMTEAMGOALIES
      *
      */
-      printf("!!!! NUMOFFREE GOALIES %d NUM OF FREE PLAYERS %d !!!!\n",FST.goaliesFree,FST.playersFree);
       if ( FST.playersFree >= NUMTEAMPLAYERS && FST.goaliesFree >= NUMTEAMGOALIES )
       {
+//        printf("!!!! NUMOFFREE GOALIES %d NUM OF FREE PLAYERS %d !!!!\n",FST.goaliesFree,FST.playersFree);
 
         //STATE CHANGE ARRIVING -> FORMING TEAM
 
@@ -216,9 +216,8 @@ static int goalieConstituteTeam (int id)
         FST.st.goalieStat[id] = FORMING_TEAM;
         saveState(nFic , &FST);
 
-        // Incrementa depois do assignment
-        ret = FST.teamId++;
 
+        //  0 1 2 3  faz signal a 4 jogadores
         for ( int i = 0 ; i < NUMTEAMPLAYERS  ; i++)
         {
         // permita a um jogador que esta a espera de uma equipa que se registe
@@ -238,10 +237,12 @@ static int goalieConstituteTeam (int id)
         FST.st.goalieStat[id] = ret == 1 ? WAITING_START_1 : WAITING_START_2;
         saveState(nFic , &FST);
 
+        // Incrementa depois de formar a equipa
+        ret = FST.teamId++;
         /*   "descontar-se" a si mesmo porque esta incluido
         //   na equipa que criou
         */
-        FST.playersFree--;
+        FST.goaliesFree--;
       }
 
       else

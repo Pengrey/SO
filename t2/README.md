@@ -5,14 +5,17 @@
   Referee ->
           1. /*TODO: error treating em semaforos*/
           2. **Overall its working**
+          3. **Check if every constant is beingUsed**
 ##    PLAYER
   Player ->
           1. /*TODO: error treating em semaforos*/
           2. **Overall its working**
+          3. **Check if every constant is beingUsed**
 ##    GOALIE
   Goalie ->
-          1. /*TODO: SECONDGOALIE STRANGELY LOCKS EVERYTHING BEFORE A FOURTH PLAYER ARRVING*/
           1. /*TODO: error treating em semaforos*/
+          2. **Overall its working**
+          3. **Check if every constant is beingUsed**
 
 
 
@@ -32,10 +35,8 @@ typedef struct {
     `unsigned int refereeStat;`
 
 } STAT;
-------------------------------------------------------------
-sh
-^
-|
+
+
 ~~ FULL_STAT; ~~
 typedef struct
 {   /** \brief state of all intervening entities */
@@ -64,7 +65,7 @@ typedef struct
 
 }
 ~~ FULL_STAT; end ~~
----------------------------------------------------------------------------
+
 typedef struct
         { /** \brief full state of the problem */
           FULL_STAT fSt;
@@ -92,7 +93,11 @@ typedef struct
           `unsigned int playerRegistered;`
 
         } SHARED_DATA;
+
+
+
 ---------------------------------------------------------------------------
+## Estados
 ~~ Available states~~
     /* Player/Goalie state constants */
 
@@ -158,9 +163,9 @@ typedef struct
     `#define  REFEREEING        3`
     /** \brief referee ending game  */
 
-#define  ENDING_GAME       4
+    `#define  ENDING_GAME       4`
 ---------------------------------------------------------------------------------------
-##Important Semaphores
+##Important Semaphores (INCOMPLETE)
 
     `probSemSharedMemSoccerGame.c:135    sh->playersWaitTeam             = PLAYERSWAITTEAM;`
     `probSemSharedMemSoccerGame.c:136    sh->goaliesWaitTeam             = GOALIESWAITTEAM;`
@@ -193,7 +198,7 @@ typedef struct
 
 
 ---------------------------------------------------------------------------------------
-
+#Other Stuff
 probSemSharedMemSoccerGame main
 sem* any
 semSharedMemGoalie
