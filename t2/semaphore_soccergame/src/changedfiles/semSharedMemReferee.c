@@ -35,7 +35,6 @@
 #include "semaphore.h"
 #include "sharedMemory.h"
 
-#define SIZE(x) sizeof(x) / sizeof(x[0])
 
 /** \brief logging file name */
 static char nFic[51];
@@ -146,7 +145,7 @@ static void arrive ()
     /* TODO: insert your code here */
     sh->fSt.st.refereeStat = ARRIVING;
     saveState(nFic , &sh->fSt);
-    sh->fSt.nReferees = NUMREFEREES;  /* TODO: (NOTSURE) ++  or  simply one ??*/
+    sh->fSt.nReferees = NUMREFEREES;  /* TODO: (NOTSURE)simply ++  or  simply one ??*/
 
     if (semUp (semgid, sh->mutex) == -1) {                                                        /* leave critical region */
         perror ("error on the up operation for semaphore access (RF)");
@@ -173,40 +172,26 @@ static void waitForTeams ()
 
     sh->fSt.st.refereeStat = WAITING_TEAMS;
     saveState(nFic , &sh->fSt);
-    /* TODO: ( ADD ERRORS TREAT ) */
-    semUp (semgid, sh->refereeWaitTeams);
+//semUp (semgid, sh->refereeWaitTeams);
 
     if (semUp (semgid, sh->mutex) == -1) {                                                        /* leave critical region */
         perror ("error on the up operation for semaphore access (RF)");
         exit (EXIT_FAILURE);
     }
     /* TODO: insert your code here */
-    /* signal  down ao semaforo REFEREWAITS Quando as equipas estiverem formadas:w */
-    /* TODO: ( ADD ERRORS TREAT ) */
-      int teams_are_formed = 1; // 1 if formed 0 if not
-      while(1){
-        teams_are_formed = 1;
-        for( int i = 0; i < NUMPLAYERS ; i++ )
-        {
-          if ( sh->fSt.st.playerStat[ i ] <= FORMING_TEAM )
-          { // if some player has state equal or less to FORMING_TEAM set teams_are_formed = 0
-            teams_are_formed = 0;
-          }
-        }
-        for( int i = 0; i < SIZE( sh->fSt.st.goalieStat ) ; i++ )
-        {
-          if ( sh->fSt.st.goalieStat[ i ] <= FORMING_TEAM )
-          {
-            teams_are_formed = 0;
-          }
-        }
-        if(teams_are_formed) // if teams are formed let the process flow
-          break;
+    int count =0;
+    while(count < 2)
+    {
+      if (semDown (semgid, sh->refereeWaitTeams) == - 1)
+      {
+        perror ("error on the up operation that makes referee proceed after knowing a team was formed");
+        exit (EXIT_FAILURE);
       }
-
-    /* signal  down ao semaforo REFEREWAITS Quando as equipas estiverem formadas:w */
-    /* TODO: ( ADD ERRORS TREAT ) */
-      semDown(semgid, sh->refereeWaitTeams);
+      else
+      {
+        count++;
+      }
+    }
 }
 
 /**
@@ -231,8 +216,12 @@ static void startGame ()
         exit (EXIT_FAILURE);
     }
     /* TODO: insert your code here */
-    for( int i = 0; i < NUMPLAYERS; i++)
-      semUp (semgid, sh->playersWaitReferee);
+    for( int i = 0; i < ( NUMTEAMPLAYERS * 2 + NUMTEAMGOALIES * 2); i++)
+      if ( semUp (semgid, sh->playersWaitReferee) == -1 )
+      {
+         perror("Error using semUp op to unlock a player who is waiting for a team");
+         exit(EXIT_FAILURE);
+      }
 }
 
 /**
@@ -284,7 +273,11 @@ static void endGame ()
     }
 
     /* TODO: insert your code here */
-    for( int i = 0; i < NUMPLAYERS; i++)
-      semUp (semgid, sh->playersWaitEnd);
+    for( int i = 0; i < (2 * NUMTEAMPLAYERS + NUMTEAMGOALIES * 2 ); i++)
+      if (semUp (semgid, sh->playersWaitEnd) == -1)
+          {
+            perror("Error using semUp op to unlock a player who is waiting for a team");
+            exit(EXIT_FAILURE);
+          }
 
 }

@@ -206,7 +206,7 @@ static int goalieConstituteTeam (int id)
      *   cant be  FST.playersFree == NUMTEAMPLAYERS && FST.goaliesFree == NUMTEAMGOALIES
      *
      */
-      if ( FST.playersFree >= NUMTEAMPLAYERS && FST.goaliesFree >= NUMTEAMGOALIES )
+      if ( FST.playersFree >= NUMTEAMPLAYERS )
       {
 //        printf("!!!! NUMOFFREE GOALIES %d NUM OF FREE PLAYERS %d !!!!\n",FST.goaliesFree,FST.playersFree);
 
@@ -221,11 +221,19 @@ static int goalieConstituteTeam (int id)
         for ( int i = 0 ; i < NUMTEAMPLAYERS  ; i++)
         {
         // permita a um jogador que esta a espera de uma equipa que se registe
-          semUp(semgid, sh->playersWaitTeam);
+         if( semUp(semgid, sh->playersWaitTeam) == -1 )
+         {
+           perror (" Error on the up operation who signales a player to stop waiting for a team ");
+           exit(EXIT_FAILURE);
+         }
           //printf("semup JOGADORES\n");
 
         // ficar bloqueado enquanto o player anterior se regista
-          semDown(semgid, sh->playerRegistered);
+         if( semDown(semgid, sh->playerRegistered) == -1)
+         {
+           perror (" Error on the up operation who signales a player to stop waiting for a team ");
+           exit(EXIT_FAILURE);
+         }
           //printf("semdown JOGADORES ----------------\n");
 
           // ja que chamou o PLAYER?(0..9) decrementa o numero de jogadores livres
@@ -234,17 +242,22 @@ static int goalieConstituteTeam (int id)
 
         //!!STATE CHANGE  FORMING TEAM -> WAITING_START_?(1 ou 2)
                                           //ret=1             ret=2
+        // Incrementa depois de formar a equipa
+        ret = FST.teamId++;
         FST.st.goalieStat[id] = ret == 1 ? WAITING_START_1 : WAITING_START_2;
         saveState(nFic , &FST);
 
-        // Incrementa depois de formar a equipa
-        ret = FST.teamId++;
         /*   "descontar-se" a si mesmo porque esta incluido
         //   na equipa que criou
         */
         FST.goaliesFree--;
+        if( semUp(semgid, sh->refereeWaitTeams) == -1)
+        {
+          perror (" Error on the up operation who signales a referee to say that \
+              a team was formed (GL)");
+          exit(EXIT_FAILURE);
+        }
       }
-
       else
       {
     /*
@@ -272,24 +285,28 @@ static int goalieConstituteTeam (int id)
       /*printf(" \033[0;32mPLAYER %d  is WAITING FOR TEAM (ret) %d \\
       * MYSTAT  %d  semDown WAITING TEAM \033[0m\n",id,ret,sh->fSt.st.playerStat[id]);*/
 
-      semDown(semgid, sh->goaliesWaitTeam);
+      if ( semDown(semgid, sh->goaliesWaitTeam) == -1)
+         {
+           perror (" Error on the up operation who signales a goalie to stop waiting for a team ");
+           exit(EXIT_FAILURE);
+         }
       /*printf(" \033[0;32mPLAYER %d  is WAITING FOR TEAM (ret) %d \\
         MYSTAT  %d  !AFTER! semDown WAITING TEAM \033[0m\n",id,ret,sh->fSt.st.playerStat[id]);*/
-      while( 1 )
-      {
         //printf(" \033[0;32mPLAYER %d  is WAITING FOR TEAM (ret) %d  MYSTAT  %d \033[0m\n",id,ret,sh->fSt.st.playerStat[id]);
 
         if(semUp(semgid, sh->playerRegistered) != -1)
-        // bloquear o jogador ate alguem dizer para ele ir jogar semUP register
         {
+        // bloquear o jogador ate alguem dizer para ele ir jogar semUP register
         // should it be assigned here? isn t it a dangerous  operation since its shared memory?
           ret = sh->fSt.teamId;
-          printf(" \033[0;35mGOALIE %d  is WAITING FOR TEAM  (ret) %d   teamID =  %d \033[0m\n",id,ret,sh->fSt.teamId);
           sh->fSt.st.goalieStat[id] = (ret == 1) ? WAITING_START_1 : WAITING_START_2;
           saveState(nFic , &sh->fSt);
-          break;
         }
-      }
+        else if ( semUp(semgid, sh->playerRegistered) == -1 )
+        {
+           perror (" Error on the up operation who enables any type of player to register on a team ");
+           exit(EXIT_FAILURE);
+        }
     }
       /* TODO: insert your code here */
 
@@ -323,9 +340,13 @@ static void waitReferee (int id, int team)
     }
 
     /* TODO: insert your code here */
-    semUp(semgid, sh->refereeWaitTeams);
-    /* TODO: insert your code here */
-    semUp(semgid,sh->playersWaitReferee);
+    if ( semDown(semgid,sh->playersWaitReferee) == -1)
+    {
+           perror (" Error on the up operation who signales a players to wait \
+               for the begining  of the game (GL)");
+           exit(EXIT_FAILURE);
+    }
+
 }
 
 /**
@@ -354,5 +375,11 @@ static void playUntilEnd (int id, int team)
     }
 
     /* TODO: insert your code here */
-    semDown(semgid , sh->playersWaitEnd);
+    if ( semDown(semgid , sh->playersWaitEnd) == -1)
+    {
+           perror (" Error on the Down operation who signales a players to wait \
+               for referee to declare end of match (GL) ");
+           exit(EXIT_FAILURE);
+
+    }
 }
