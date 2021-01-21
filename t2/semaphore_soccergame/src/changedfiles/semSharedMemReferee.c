@@ -179,19 +179,12 @@ static void waitForTeams ()
         exit (EXIT_FAILURE);
     }
     /* TODO: insert your code here */
-    int count =0;
-    while(count < 2)
-    {
+    for ( int i = 0; i < 2; i++)
       if (semDown (semgid, sh->refereeWaitTeams) == - 1)
       {
         perror ("error on the up operation that makes referee proceed after knowing a team was formed");
         exit (EXIT_FAILURE);
       }
-      else
-      {
-        count++;
-      }
-    }
 }
 
 /**

@@ -182,8 +182,6 @@ static int goalieConstituteTeam (int id)
 
     // begingin of code
     sh->fSt.goaliesArrived++;
-    sh->fSt.goaliesFree++;
-
 #define FST sh->fSt
                             //2 * 1
     if ( FST.goaliesArrived > 2 * NUMTEAMGOALIES )
@@ -195,7 +193,6 @@ static int goalieConstituteTeam (int id)
       //fprintf(stderr,"PLAYER %d is LATE %d\n",id,ret);
       FST.st.goalieStat[id] = LATE;
       saveState(nFic , &FST);
-      FST.goaliesFree--;
     }
     else
     {
@@ -206,6 +203,7 @@ static int goalieConstituteTeam (int id)
      *   cant be  FST.playersFree == NUMTEAMPLAYERS && FST.goaliesFree == NUMTEAMGOALIES
      *
      */
+      sh->fSt.goaliesFree++;
       if ( FST.playersFree >= NUMTEAMPLAYERS )
       {
 //        printf("!!!! NUMOFFREE GOALIES %d NUM OF FREE PLAYERS %d !!!!\n",FST.goaliesFree,FST.playersFree);
@@ -221,19 +219,19 @@ static int goalieConstituteTeam (int id)
         for ( int i = 0 ; i < NUMTEAMPLAYERS  ; i++)
         {
         // permita a um jogador que esta a espera de uma equipa que se registe
-         if( semUp(semgid, sh->playersWaitTeam) == -1 )
-         {
-           perror (" Error on the up operation who signales a player to stop waiting for a team ");
-           exit(EXIT_FAILURE);
-         }
+          if( semUp(semgid, sh->playersWaitTeam) == -1 )
+          {
+            perror (" Error on the up operation who signales a player to stop waiting for a team ");
+            exit(EXIT_FAILURE);
+          }
           //printf("semup JOGADORES\n");
 
-        // ficar bloqueado enquanto o player anterior se regista
-         if( semDown(semgid, sh->playerRegistered) == -1)
-         {
-           perror (" Error on the up operation who signales a player to stop waiting for a team ");
-           exit(EXIT_FAILURE);
-         }
+          // ficar bloqueado enquanto o player anterior se regista
+          if( semDown(semgid, sh->playerRegistered) == -1)
+          {
+            perror (" Error on the up operation who signales a player to stop waiting for a team ");
+            exit(EXIT_FAILURE);
+          }
           //printf("semdown JOGADORES ----------------\n");
 
           // ja que chamou o PLAYER?(0..9) decrementa o numero de jogadores livres
@@ -287,24 +285,19 @@ static int goalieConstituteTeam (int id)
 
       if ( semDown(semgid, sh->goaliesWaitTeam) == -1)
          {
-           perror (" Error on the up operation who signales a goalie to stop waiting for a team ");
+           perror (" Error on the Down operation  Waiting team GL ");
            exit(EXIT_FAILURE);
          }
       /*printf(" \033[0;32mPLAYER %d  is WAITING FOR TEAM (ret) %d \\
         MYSTAT  %d  !AFTER! semDown WAITING TEAM \033[0m\n",id,ret,sh->fSt.st.playerStat[id]);*/
         //printf(" \033[0;32mPLAYER %d  is WAITING FOR TEAM (ret) %d  MYSTAT  %d \033[0m\n",id,ret,sh->fSt.st.playerStat[id]);
 
-        if(semUp(semgid, sh->playerRegistered) != -1)
+        ret = sh->fSt.teamId;
+        sh->fSt.st.goalieStat[id] = (ret == 1) ? WAITING_START_1 : WAITING_START_2;
+        saveState(nFic , &sh->fSt);
+        if(semUp(semgid, sh->playerRegistered) == -1)
         {
-        // bloquear o jogador ate alguem dizer para ele ir jogar semUP register
-        // should it be assigned here? isn t it a dangerous  operation since its shared memory?
-          ret = sh->fSt.teamId;
-          sh->fSt.st.goalieStat[id] = (ret == 1) ? WAITING_START_1 : WAITING_START_2;
-          saveState(nFic , &sh->fSt);
-        }
-        else if ( semUp(semgid, sh->playerRegistered) == -1 )
-        {
-           perror (" Error on the up operation who enables any type of player to register on a team ");
+           perror (" Error on the up operation that states a player has registered a team ");
            exit(EXIT_FAILURE);
         }
     }
@@ -330,7 +323,7 @@ static void waitReferee (int id, int team)
         exit (EXIT_FAILURE);
     }
 
-    sh->fSt.st.goalieStat[id] =  team == 1 ? PLAYING_1 : PLAYING_2 ;
+    sh->fSt.st.goalieStat[id] =  team == 1 ? WAITING_START_1 : WAITING_START_2;
     saveState(nFic , &sh->fSt);
     /* TODO: insert your code here */
 

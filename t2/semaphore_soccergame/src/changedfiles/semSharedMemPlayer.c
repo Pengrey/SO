@@ -183,12 +183,9 @@ static int playerConstituteTeam (int id)
         perror ("error on the up operation for semaphore access (PL)");
         exit (EXIT_FAILURE);
     }
-
     /* TODO: insert your code here */
-
     // begingin of code
     sh->fSt.playersArrived++;
-    sh->fSt.playersFree++;
 
 #define FST sh->fSt
                             //2 * 4
@@ -200,7 +197,6 @@ static int playerConstituteTeam (int id)
       //STATE CHANGE ARRIVING -> LATE
       FST.st.playerStat[id] = LATE;
       saveState(nFic , &FST);
-      FST.playersFree--;
     }
     else
     {
@@ -211,6 +207,8 @@ static int playerConstituteTeam (int id)
      *   cant be  FST.playersFree == NUMTEAMPLAYERS && FST.goaliesFree == NUMTEAMGOALIES
      *
      */
+      sh->fSt.playersFree++;
+      // incrementar o numero de jogadores disponiveis tanto os que vao formar equipa como os que vao ficar a espera
       if ( FST.playersFree >= NUMTEAMPLAYERS && FST.goaliesFree >= NUMTEAMGOALIES )
       {
 
@@ -219,7 +217,6 @@ static int playerConstituteTeam (int id)
         //printf("\033[0;31mPLAYER %d is forming TEAM %d\033[0m\n",id,ret);
         FST.st.playerStat[id] = FORMING_TEAM;
         saveState(nFic , &FST);
-
 
         for ( int i = 0 ; i < ( NUMTEAMPLAYERS - 1 )  ; i++)
         {
@@ -234,7 +231,7 @@ static int playerConstituteTeam (int id)
         // ficar bloqueado enquanto o player anterior se regista
           if ( semDown(semgid, sh->playerRegistered) == -1 )
           {
-            perror("Error using semUp op to unlock a player who is waiting for a team");
+            perror("Error using Down to wait player registration");
             exit(EXIT_FAILURE);
           }
           //printf("semdown JOGADORES ----------------\n");
@@ -258,17 +255,22 @@ static int playerConstituteTeam (int id)
            // ficar bloqueado enquanto o goalie anterior se regista
           if ( semDown(semgid, sh->playerRegistered) == -1 )
           {
-            perror("Error using semUp op to unlock a player who is waiting for a team");
+            perror("Error using up playerREgistered");
             exit(EXIT_FAILURE);
           }
-          //printf("semdown  goalie -------------------------\n");
-
-           // ja que chamou o Goalie?(0..2) decrementa o numero de goalies livres
           FST.goaliesFree--;
         }
 
+
+        if( semUp(semgid, sh->refereeWaitTeams) == -1)
+        {
+          perror (" Error on the up operation who signales a referee to say that \
+              a team was formed ( PL )");
+          exit(EXIT_FAILURE);
+        }
+
         //!!STATE CHANGE  FORMING TEAM -> WAITING_START_?(1 ou 2)
-                                          //ret=1             ret=2
+        ret = FST.teamId++;
         FST.st.playerStat[id] = ret == 1 ? WAITING_START_1 : WAITING_START_2;
         saveState(nFic , &FST);
 
@@ -276,16 +278,6 @@ static int playerConstituteTeam (int id)
         //   na equipa que criou
         */
         FST.playersFree--;
-        // Incrementa depois do assignment
-        //printf("\033[0;31mPPPPLAYER %d is forming TEAM %d\033[0m\n",id,ret);
-        //printf("\033[0;31mPPPPLAYER %d is forming TEAM %d\033[0m\n",id,ret);
-        if( semUp(semgid, sh->refereeWaitTeams) == -1)
-        {
-          perror (" Error on the up operation who signales a referee to say that \
-              a team was formed ( PL )");
-          exit(EXIT_FAILURE);
-        }
-        ret = FST.teamId++;
       }
       else
       {
@@ -326,7 +318,7 @@ static int playerConstituteTeam (int id)
       {
       // bloquear o jogador ate alguem dizer para ele ir jogar semUP register
       // should it be assigned here? isn t it a dangerous  operation since its shared memory?
-        perror("semUP player 332");
+        perror("semUP player to say a player has finished");
         exit(EXIT_FAILURE);
       }
     }
@@ -404,7 +396,7 @@ static void playUntilEnd (int id, int team)
     if ( semDown(semgid , sh->playersWaitEnd) == -1 )
     {
            perror (" Error on the down operation that causes any player \
-               process to hang until a referee signals them down meaning the game ended (PL)");
+               process to hang until a referee signals them up meaning the game ended (PL)");
            exit(EXIT_FAILURE);
     }
 }
